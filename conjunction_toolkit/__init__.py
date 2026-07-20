@@ -26,6 +26,7 @@ from conjunction_toolkit.satellites import (
     elements_to_satellite,
     get_timescale,
 )
+from conjunction_toolkit.screener import screen_pairs_fast
 from conjunction_toolkit.verify import VerifyConfig, refine_closest_approach, verify_claim
 from conjunction_toolkit.visualize import (
     plot_distance_vs_time,
@@ -61,6 +62,7 @@ __all__ = [
     "save_html",
     "screen_catalog_subset",
     "screen_pairs",
+    "screen_pairs_fast",
     "time_grid",
     "verify_claim",
 ]

@@ -79,6 +79,7 @@ conjections_hackaton/
 │   ├── propagate.py         # time grids, positions, pair distances
 │   ├── visualize.py         # Plotly 3D / distance plots
 │   ├── baseline.py          # simple all-pairs screener
+│   ├── screener.py          # fast altitude-band + spatial-hash screener
 │   ├── verify.py            # independent check of a claim
 │   └── __init__.py          # public API re-exports
 ├── examples/                # runnable scripts
@@ -92,7 +93,7 @@ conjections_hackaton/
 2. **`parse.py`** — how files become a `Catalog`.
 3. **`satellites.py`** — how elements become propagatable satellites.
 4. **`propagate.py`** — time grids and GCRS positions / distances.
-5. **`visualize.py`** / **`verify.py`** / **`baseline.py`** — plotting, checking claims, and a simple pair screen.
+5. **`visualize.py`** / **`verify.py`** / **`baseline.py`** / **`screener.py`** — plotting, checking claims, brute-force vs fast screening.
 
 ### Module map
 
@@ -103,6 +104,7 @@ conjections_hackaton/
 | `propagate` | `time_grid`, `propagate_positions`, `pair_distances`, closest approach on a grid | Compute where objects are and how far apart |
 | `visualize` | Plotly trajectories and pair close-approach views | Debug geometry visually |
 | `baseline` | Brute-force screen of unique pairs on a time grid | See a straightforward “check everything” loop |
+| `screener` | Altitude-band + spatial-hash screen (`screen_pairs_fast`) | Run a faster geometric conjunction search |
 | `verify` | Re-propagate + refine TCA; accept/reject a `ConjunctionClaim` | Validate a reported close approach |
 | `models` | Shared dataclasses | Extend or serialize toolkit data |
 
@@ -129,6 +131,7 @@ catalog file
 | `examples/parse_demo.py` | Loading and inspecting the catalog |
 | `examples/plot_trajectories.py` | 3D orbits → `examples/output/trajectories.html` |
 | `examples/run_baseline_small.py` | Small LEO subset screen + verify |
+| `examples/run_fast_screen.py` | Fast screener vs baseline timing / pair coverage |
 | `examples/verify_claim.py` | CLI for checking a claim (`--demo` or explicit args) |
 
 ---
@@ -181,8 +184,35 @@ save_html(fig, "orbits.html")
 python examples/parse_demo.py
 python examples/plot_trajectories.py
 python examples/run_baseline_small.py
+python examples/run_fast_screen.py       # optional N: python examples/run_fast_screen.py 200
 python examples/verify_claim.py --demo
 python examples/verify_claim.py --a 1 --b 5 --tca 2026-05-13T12:00:00+00:00 --d 5000
+```
+
+## Fast screener
+
+`screen_pairs_fast()` is the toolkit’s reference fast algorithm:
+
+1. **Altitude bands** from SGP4 elements (approx. perigee/apogee) — skip pairs that cannot meet within `threshold + pad`
+2. **Spatial KD-tree** each timestep (`scipy.spatial.cKDTree.query_pairs`) — only keep pairs that come within `threshold_km` on the grid (same pruning role as a spatial hash / neighbor voxels)
+3. Vectorized full-grid miss distance on that candidate set, then optional **TCA refine**
+
+```python
+from conjunction_toolkit import screen_pairs_fast
+
+claims = screen_pairs_fast(
+    sats, t0, t1,
+    step_seconds=60.0,
+    threshold_km=10.0,
+    refine=True,
+)
+```
+
+Compare against the brute-force baseline (`N` and optional threshold km):
+
+```bash
+python examples/run_fast_screen.py 200
+python examples/run_fast_screen.py 500 25
 ```
 
 ## Claiming a conjunction
