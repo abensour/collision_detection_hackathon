@@ -1,16 +1,137 @@
 # Conjunction Hackathon Toolkit
 
-Python toolkit built on [Skyfield](https://rhodesmill.org/skyfield/) (SGP4) for a hackathon focused on **fastest conjunction-finding algorithms**.
+Python toolkit built on [Skyfield](https://rhodesmill.org/skyfield/) (SGP4) for loading satellite catalogs, propagating orbits, visualizing trajectories, and checking close approaches (conjunctions).
 
-## What you get
+---
 
-| Module | Role |
-|--------|------|
-| `parse` | Load SpaceTrack JSON **now**; `load_tle_file()` ready for classic TLE on hackathon day |
-| `satellites` / `propagate` | Build `EarthSatellite` objects and propagate positions (**km, GCRS**) |
-| `visualize` | Interactive **Plotly** 3D trajectories and pair close-approach views |
-| `baseline` | Deliberately slow **O(N²×T)** brute-force screener to beat |
-| `verify` | Independent check of a claimed TCA / miss distance |
+## Satellite basics
+
+### Gravity and circular orbits
+
+A satellite stays in orbit when its sideways speed matches Earth’s gravity at that altitude. For a **circular** orbit around Earth (two-body approximation):
+
+\[
+v = \sqrt{\frac{GM}{r}}
+\qquad
+T = 2\pi\sqrt{\frac{r^{3}}{GM}}
+\]
+
+| Symbol | Meaning |
+|--------|---------|
+| \(v\) | Orbital speed |
+| \(T\) | Orbital period (one full revolution) |
+| \(r\) | Distance from Earth’s **center** (not height above the surface) |
+| \(GM\) | Earth’s gravitational parameter ≈ \(3.986 \times 10^{5}\,\mathrm{km}^{3}/\mathrm{s}^{2}\) |
+
+Height above the surface is \(h = r - R_E\), with Earth radius \(R_E \approx 6371\,\mathrm{km}\).
+
+So higher orbits are slower and take longer to go around once.
+
+### Typical regimes
+
+| Regime | Approx. altitude | Rough speed | Rough period |
+|--------|------------------|-------------|--------------|
+| LEO (low Earth orbit) | 200–2000 km | ~7.8–6.9 km/s | ~90–130 min |
+| MEO | ~20 000 km (e.g. GPS) | ~3.9 km/s | ~12 h |
+| GEO | ~35 786 km | ~3.1 km/s | ~24 h (matches Earth’s rotation) |
+
+Most catalog objects in SpaceTrack-style dumps are in **LEO**: they move fast, complete a revolution in about 1.5 hours, and relative geometry between two objects can change quickly.
+
+### How satellites move (Keplerian elements)
+
+Catalog data (TLE / SpaceTrack GP) describes each object with classical orbital elements, including:
+
+| Element | What it controls |
+|---------|------------------|
+| **Inclination** | Tilt of the orbital plane vs. Earth’s equator |
+| **RAAN** (right ascension of ascending node) | Orientation of the plane in space |
+| **Argument of perigee** | Where the closest point sits in the plane |
+| **Eccentricity** | How elongated the ellipse is (`0` ≈ circular) |
+| **Mean anomaly** | Where the satellite is along the orbit at epoch |
+| **Mean motion** | Revolutions per day → related to semi-major axis / period |
+
+The toolkit does **not** integrate Newton’s laws from scratch. It uses **SGP4**: a standard propagator that turns those elements into positions over time, including simplified drag and other perturbations via fields like `BSTAR`.
+
+### Positions in this toolkit
+
+All positions and miss distances are in Skyfield **GCRS** coordinates, in **kilometers**. Use the same frame everywhere so distances stay comparable.
+
+### Conjunction vocabulary
+
+| Term | Meaning |
+|------|---------|
+| **Conjunction** | Two objects coming close in space (and usually near the same time) |
+| **TCA** | Time of closest approach |
+| **Miss distance** | Minimum separation at TCA |
+
+A claimed conjunction is a pair of NORAD IDs, a TCA, and a miss distance. The verifier re-propagates both objects independently and checks that claim.
+
+---
+
+## Finding your way around the code
+
+```
+conjections_hackaton/
+├── conjunction_toolkit/     # library package
+│   ├── models.py            # Catalog, OrbitalElements, ConjunctionClaim, …
+│   ├── parse.py             # load SpaceTrack JSON / TLE → Catalog
+│   ├── satellites.py        # Catalog → Skyfield EarthSatellite
+│   ├── propagate.py         # time grids, positions, pair distances
+│   ├── visualize.py         # Plotly 3D / distance plots
+│   ├── baseline.py          # simple all-pairs screener
+│   ├── verify.py            # independent check of a claim
+│   └── __init__.py          # public API re-exports
+├── examples/                # runnable scripts
+├── spacetrack_data.json     # catalog dump (when present)
+└── requirements.txt
+```
+
+### Suggested reading order
+
+1. **`models.py`** — data shapes (`Catalog`, `OrbitalElements`, `ConjunctionClaim`).
+2. **`parse.py`** — how files become a `Catalog`.
+3. **`satellites.py`** — how elements become propagatable satellites.
+4. **`propagate.py`** — time grids and GCRS positions / distances.
+5. **`visualize.py`** / **`verify.py`** / **`baseline.py`** — plotting, checking claims, and a simple pair screen.
+
+### Module map
+
+| Module | Responsibility | Start here if you want to… |
+|--------|----------------|----------------------------|
+| `parse` | Load SpaceTrack JSON or classic `.tle` into `Catalog` | Change input formats or inspect catalog fields |
+| `satellites` | Build `EarthSatellite` objects (SGP4) | Understand how elements become orbits |
+| `propagate` | `time_grid`, `propagate_positions`, `pair_distances`, closest approach on a grid | Compute where objects are and how far apart |
+| `visualize` | Plotly trajectories and pair close-approach views | Debug geometry visually |
+| `baseline` | Brute-force screen of unique pairs on a time grid | See a straightforward “check everything” loop |
+| `verify` | Re-propagate + refine TCA; accept/reject a `ConjunctionClaim` | Validate a reported close approach |
+| `models` | Shared dataclasses | Extend or serialize toolkit data |
+
+Public entry points are re-exported from `conjunction_toolkit` (see `__init__.py`). Prefer importing from the package root:
+
+```python
+from conjunction_toolkit import load_default_catalog, catalog_to_satellites, time_grid
+```
+
+### Typical data flow
+
+```
+catalog file
+    → parse (Catalog / OrbitalElements)
+    → satellites (EarthSatellite)
+    → propagate (positions in km, GCRS)
+    → visualize  and/or  screen pairs  and/or  verify_claim
+```
+
+### Examples
+
+| Script | What it shows |
+|--------|----------------|
+| `examples/parse_demo.py` | Loading and inspecting the catalog |
+| `examples/plot_trajectories.py` | 3D orbits → `examples/output/trajectories.html` |
+| `examples/run_baseline_small.py` | Small LEO subset screen + verify |
+| `examples/verify_claim.py` | CLI for checking a claim (`--demo` or explicit args) |
+
+---
 
 ## Setup
 
@@ -23,17 +144,17 @@ pip install -r requirements.txt
 
 ## Data
 
-- **Now:** [`spacetrack_data.json`](spacetrack_data.json) — SpaceTrack GP element fields (~67k objects).
-- **Hackathon day:** swap to a classic `.tle` file:
+- **Now:** `spacetrack_data.json` — SpaceTrack GP element fields (large catalog when present).
+- **Hackathon day:** classic `.tle` file via `load_tle_file()`.
 
 ```python
 from conjunction_toolkit import load_tle_file, load_spacetrack_json
 
-catalog = load_spacetrack_json("spacetrack_data.json")  # today
-# catalog = load_tle_file("catalog.tle")                # hackathon day
+catalog = load_spacetrack_json("spacetrack_data.json")
+# catalog = load_tle_file("catalog.tle")
 ```
 
-Downstream APIs (`catalog_to_satellites`, screening, verify, Plotly) stay the same.
+Downstream APIs (`catalog_to_satellites`, propagation, verify, Plotly) stay the same.
 
 ## Quick start
 
@@ -56,32 +177,20 @@ fig = plot_trajectories(sats, t)
 save_html(fig, "orbits.html")
 ```
 
-### Examples
-
 ```bash
 python examples/parse_demo.py
-python examples/plot_trajectories.py          # → examples/output/trajectories.html
-python examples/run_baseline_small.py         # small LEO subset + verify
+python examples/plot_trajectories.py
+python examples/run_baseline_small.py
 python examples/verify_claim.py --demo
 python examples/verify_claim.py --a 1 --b 5 --tca 2026-05-13T12:00:00+00:00 --d 5000
 ```
 
-## Reference frame
-
-All positions and miss distances use Skyfield **GCRS** coordinates in **kilometers**. Team algorithms and the verifier must use the same frame for fair comparison.
-
 ## Claiming a conjunction
 
-Submit a `ConjunctionClaim(norad_a, norad_b, tca_utc, min_distance_km)`. Organizers run `verify_claim()` which:
+Submit a `ConjunctionClaim(norad_a, norad_b, tca_utc, min_distance_km)`. Organizers run `verify_claim()`, which:
 
 1. Re-propagates both objects from the shared catalog
-2. Refines TCA around the claimed time (coarse → fine grid, expanding if the min is near a window edge)
+2. Refines TCA around the claimed time (coarse → fine grid; expands if the min is near a window edge)
 3. Accepts only if distance and TCA match within tolerances (default: 100 m, 5 s)
 
-Refine your TCA before submitting — a coarse time grid alone will usually fail the distance/TCA tolerances. Optional `VerifyConfig.max_miss_distance_km` also requires the true miss distance to be under a threshold.
-
-## Baseline (to beat)
-
-`screen_pairs()` checks every unique pair at every time step. It is correct but slow — replace it with your algorithm, then pass claims through `verify_claim`.
-# collision_detection_hackathon
-# collision_detection_hackathon
+Refine your TCA before submitting — a coarse time grid alone often fails those tolerances. Optional `VerifyConfig.max_miss_distance_km` can also require the true miss distance to be under a threshold.
