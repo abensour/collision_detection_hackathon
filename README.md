@@ -84,3 +84,4 @@ Refine your TCA before submitting — a coarse time grid alone will usually fail
 
 `screen_pairs()` checks every unique pair at every time step. It is correct but slow — replace it with your algorithm, then pass claims through `verify_claim`.
 # collision_detection_hackathon
+# collision_detection_hackathon
