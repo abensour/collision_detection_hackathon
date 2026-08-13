@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run the slow baseline screener on a small Starlink subset."""
+"""Run the naive baseline on a small Starlink subset."""
 
 from __future__ import annotations
 
@@ -17,7 +17,7 @@ from conjunction_toolkit import (
     catalog_to_satellites,
     load_default_catalog,
     plot_pair_with_distance,
-    refine_closest_approach,
+    improve_closest_approach_estimate,
     save_html,
     screen_pairs,
     time_grid,
@@ -56,11 +56,11 @@ def main() -> None:
     print(f"Window: {t0.isoformat()} → {t1.isoformat()}")
     print(f"Raw grid claims within {threshold_km} km: {len(raw_claims)}")
 
-    # Refine before verifying (coarse grid TCA is only approximate)
+    # Improve coarse-grid times before verifying
     config = VerifyConfig(max_miss_distance_km=threshold_km)
     claims: list[ConjunctionClaim] = []
     for raw in raw_claims:
-        tca, dmin = refine_closest_approach(
+        tca, dmin = improve_closest_approach_estimate(
             sats[raw.norad_a], sats[raw.norad_b], raw.tca_utc
         )
         claims.append(

@@ -5,3 +5,9 @@ __pycache__/
 .pytest_cache/
 examples/output/
 .DS_Store
+
+# Full catalog dump (organizer only; students use spacetrack_data.json)
+spacetrack_data_full.json
+colab_bundle/
+colab_conjunction_bundle.zip
+__pycache__/

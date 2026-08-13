@@ -17,7 +17,7 @@ from conjunction_toolkit import (
     VerifyConfig,
     catalog_to_satellites,
     load_default_catalog,
-    refine_closest_approach,
+    improve_closest_approach_estimate,
     verify_claim,
 )
 
@@ -72,7 +72,7 @@ def main() -> None:
         sats = catalog_to_satellites(catalog, norad_ids=[el.norad_cat_id for el in leo])
         a_id, b_id = leo[0].norad_cat_id, leo[1].norad_cat_id
         approx = max(leo[0].epoch_utc, leo[1].epoch_utc)
-        tca, dmin = refine_closest_approach(sats[a_id], sats[b_id], approx)
+        tca, dmin = improve_closest_approach_estimate(sats[a_id], sats[b_id], approx)
         claim = ConjunctionClaim(
             norad_a=a_id,
             norad_b=b_id,

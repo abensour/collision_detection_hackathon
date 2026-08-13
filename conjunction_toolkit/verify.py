@@ -1,7 +1,7 @@
-"""Independent verification of claimed conjunctions.
+"""Independent verification of claimed close approaches.
 
 Does not trust team algorithms: re-propagates both objects from the shared
-catalog and refines TCA around the claimed epoch.
+catalog and improves the closest-approach time around the claimed moment.
 """
 
 from __future__ import annotations
@@ -26,23 +26,32 @@ from conjunction_toolkit.satellites import get_timescale
 
 @dataclass
 class VerifyConfig:
-    """Acceptance tolerances and TCA refinement window."""
+    """How strict verification is when checking a claim.
 
-    # Claimed miss distance must be within this of the recomputed value
+    Attributes
+    ----------
+    distance_tolerance_km:
+        Claimed miss distance must match the recomputed one within this
+        many kilometers (default 0.1 km = 100 meters).
+    tca_tolerance_seconds:
+        Claimed time of closest approach must match within this many seconds
+        (default 5 s). The field name on claims is still ``tca_utc``.
+    max_miss_distance_km:
+        If set, also reject claims whose true miss distance is larger than this.
+    refine_window_seconds / coarse_step_seconds / fine_*:
+        Internal search settings for ``improve_closest_approach_estimate``.
+    """
+
     distance_tolerance_km: float = 0.1  # 100 m
-    # Claimed TCA must be within this of the refined TCA
     tca_tolerance_seconds: float = 5.0
-    # Optional: also require that the true miss distance is below this
-    # (None = only check claim consistency, not absolute closeness)
     max_miss_distance_km: Optional[float] = None
-    # Coarse then fine refinement around claimed TCA
-    refine_window_seconds: float = 300.0  # ±5 minutes
+    refine_window_seconds: float = 300.0  # ±5 minutes around the rough guess
     coarse_step_seconds: float = 5.0
     fine_window_seconds: float = 15.0
     fine_step_seconds: float = 0.25
 
 
-def _refine_tca(
+def _closest_on_local_grid(
     sat_a: EarthSatellite,
     sat_b: EarthSatellite,
     center: datetime,
@@ -57,30 +66,54 @@ def _refine_tca(
     times = datetimes_of(t)
     pos_a = propagate_positions(sat_a, t)
     pos_b = propagate_positions(sat_b, t)
-    tca, dmin, _ = closest_approach_on_grid(pos_a, pos_b, times)
-    return tca, dmin
+    closest_time, closest_distance_km, _ = closest_approach_on_grid(
+        pos_a, pos_b, times
+    )
+    return closest_time, closest_distance_km
 
 
-def refine_closest_approach(
+def improve_closest_approach_estimate(
     sat_a: EarthSatellite,
     sat_b: EarthSatellite,
-    approximate_tca: datetime,
+    rough_closest_time: datetime,
     *,
     config: Optional[VerifyConfig] = None,
     ts: Optional[Timescale] = None,
 ) -> tuple[datetime, float]:
-    """Multi-pass TCA refinement around ``approximate_tca``.
+    """Improve a rough guess of when two objects were closest.
 
-    Expands the coarse window if the discrete minimum sits near an edge
-    (so a nearby deeper approach is not missed), then runs a fine grid.
+    Why this exists
+    ---------------
+    If you only check positions every 30 minutes, you get an *approximate*
+    closest time (the sample where distance was smallest). That is often too
+    coarse for verification (which needs ~seconds and ~100 m accuracy).
+
+    What it does
+    ------------
+    1. Re-propagates both objects around ``rough_closest_time`` on a finer grid
+       (seconds, not minutes).
+    2. If the minimum sits near the edge of that search, expands and recenters.
+    3. Runs an even finer pass and returns the improved time and distance.
+
+    Parameters
+    ----------
+    sat_a, sat_b:
+        The two satellites.
+    rough_closest_time:
+        Your approximate time of closest approach (for example the best time
+        among coarse samples).
+
+    Returns
+    -------
+    (improved_closest_time_utc, closest_distance_km)
     """
     config = config or VerifyConfig()
     ts = get_timescale(ts)
-    center = ensure_utc(approximate_tca)
+    center = ensure_utc(rough_closest_time)
     window = config.refine_window_seconds
 
     for _ in range(6):
-        tca, dmin = _refine_tca(
+        closest_time, closest_distance_km = _closest_on_local_grid(
             sat_a,
             sat_b,
             center,
@@ -88,15 +121,14 @@ def refine_closest_approach(
             step_seconds=config.coarse_step_seconds,
             ts=ts,
         )
-        # If min is near the edge, expand and recenter
         edge_margin = 2.0 * config.coarse_step_seconds
-        offset = abs((tca - center).total_seconds())
+        offset = abs((closest_time - center).total_seconds())
         if offset < window - edge_margin:
             break
-        center = tca
+        center = closest_time
         window *= 2.0
     else:
-        tca, dmin = _refine_tca(
+        closest_time, closest_distance_km = _closest_on_local_grid(
             sat_a,
             sat_b,
             center,
@@ -105,15 +137,15 @@ def refine_closest_approach(
             ts=ts,
         )
 
-    tca, dmin = _refine_tca(
+    closest_time, closest_distance_km = _closest_on_local_grid(
         sat_a,
         sat_b,
-        tca,
+        closest_time,
         window_seconds=config.fine_window_seconds,
         step_seconds=config.fine_step_seconds,
         ts=ts,
     )
-    return tca, dmin
+    return closest_time, closest_distance_km
 
 
 def verify_claim(
@@ -123,7 +155,12 @@ def verify_claim(
     config: Optional[VerifyConfig] = None,
     ts: Optional[Timescale] = None,
 ) -> VerificationResult:
-    """Recompute TCA/distance for a claim and accept or reject with reasons."""
+    """Independently re-check one close-approach claim.
+
+    Re-propagates both objects, improves the closest-approach time near the
+    claimed moment, and accepts the claim only if distance and time match
+    within ``VerifyConfig`` tolerances.
+    """
     config = config or VerifyConfig()
     ts = get_timescale(ts)
     messages: list[str] = []
@@ -146,7 +183,7 @@ def verify_claim(
         )
 
     try:
-        tca, dmin = refine_closest_approach(
+        closest_time, closest_distance_km = improve_closest_approach_estimate(
             sat_a, sat_b, claim.tca_utc, config=config, ts=ts
         )
     except Exception as exc:  # noqa: BLE001 — surface propagation failures cleanly
@@ -156,34 +193,36 @@ def verify_claim(
             recomputed_tca_utc=None,
             distance_error_km=float("nan"),
             tca_error_seconds=None,
-            messages=[f"Propagation/refinement failed: {exc}"],
+            messages=[f"Propagation / closest-approach improvement failed: {exc}"],
         )
 
-    distance_error = abs(dmin - claim.min_distance_km)
-    tca_error = abs((tca - ensure_utc(claim.tca_utc)).total_seconds())
+    distance_error = abs(closest_distance_km - claim.min_distance_km)
+    time_error = abs(
+        (closest_time - ensure_utc(claim.tca_utc)).total_seconds()
+    )
 
     ok = True
     if distance_error > config.distance_tolerance_km:
         ok = False
         messages.append(
             f"Distance mismatch: claimed {claim.min_distance_km:.6f} km, "
-            f"recomputed {dmin:.6f} km (error {distance_error:.6f} km > "
+            f"recomputed {closest_distance_km:.6f} km (error {distance_error:.6f} km > "
             f"{config.distance_tolerance_km} km)"
         )
-    if tca_error > config.tca_tolerance_seconds:
+    if time_error > config.tca_tolerance_seconds:
         ok = False
         messages.append(
-            f"TCA mismatch: claimed {claim.tca_utc.isoformat()}, "
-            f"recomputed {tca.isoformat()} (error {tca_error:.3f} s > "
+            f"Closest-time mismatch: claimed {claim.tca_utc.isoformat()}, "
+            f"recomputed {closest_time.isoformat()} (error {time_error:.3f} s > "
             f"{config.tca_tolerance_seconds} s)"
         )
     if (
         config.max_miss_distance_km is not None
-        and dmin > config.max_miss_distance_km
+        and closest_distance_km > config.max_miss_distance_km
     ):
         ok = False
         messages.append(
-            f"Recomputed miss distance {dmin:.6f} km exceeds "
+            f"Recomputed miss distance {closest_distance_km:.6f} km exceeds "
             f"max_miss_distance_km={config.max_miss_distance_km}"
         )
 
@@ -192,10 +231,10 @@ def verify_claim(
 
     return VerificationResult(
         ok=ok,
-        recomputed_distance_km=dmin,
-        recomputed_tca_utc=tca,
+        recomputed_distance_km=closest_distance_km,
+        recomputed_tca_utc=closest_time,
         distance_error_km=distance_error,
-        tca_error_seconds=tca_error,
+        tca_error_seconds=time_error,
         messages=messages,
     )
 

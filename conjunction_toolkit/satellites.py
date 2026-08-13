@@ -1,4 +1,8 @@
-"""Build Skyfield EarthSatellite objects from a Catalog."""
+"""Build Skyfield EarthSatellite objects from a Catalog.
+
+``catalog_to_satellites`` is the usual entry point for the notebook:
+turn selected catalog rows into objects you can propagate with SGP4.
+"""
 
 from __future__ import annotations
 
@@ -92,7 +96,20 @@ def catalog_to_satellites(
     norad_ids: Optional[Sequence[int]] = None,
     ts: Optional[Timescale] = None,
 ) -> Dict[int, EarthSatellite]:
-    """Build EarthSatellite objects for all (or selected) catalog entries."""
+    """Turn catalog rows into satellites you can propagate.
+
+    Parameters
+    ----------
+    catalog:
+        Loaded catalog.
+    norad_ids:
+        If given, only build these object ids; otherwise build all.
+
+    Returns
+    -------
+    dict
+        ``{object_id: EarthSatellite}`` ready for ``propagate_positions``.
+    """
     ts = get_timescale(ts)
     ids = list(norad_ids) if norad_ids is not None else catalog.ids()
     out: Dict[int, EarthSatellite] = {}

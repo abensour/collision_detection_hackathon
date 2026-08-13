@@ -33,7 +33,11 @@ def time_grid(
     *,
     ts: Optional[Timescale] = None,
 ) -> Time:
-    """Build a Skyfield Time array spanning ``[t0, t1]`` inclusive of endpoints."""
+    """Build evenly spaced sample times from ``t0`` until ``t1``.
+
+    Example: ``time_grid(start, start + 6 hours, step_seconds=30*60)`` gives
+    one sample every 30 minutes while you propagate for 6 hours.
+    """
     ts = get_timescale(ts)
     t0 = ensure_utc(t0)
     t1 = ensure_utc(t1)
@@ -61,7 +65,11 @@ def propagate_positions(
     sat: EarthSatellite,
     t: Time,
 ) -> np.ndarray:
-    """Propagate one satellite; return positions shape ``(3, N)`` or ``(3,)`` in km (GCRS)."""
+    """Compute where one satellite is at each sample time.
+
+    Returns positions in kilometers (GCRS), shape ``(3, N)`` for N times
+    or ``(3,)`` for a single time.
+    """
     geo = sat.at(t)
     return np.asarray(geo.position.km)
 
@@ -95,7 +103,16 @@ def closest_approach_on_grid(
     pos_b: np.ndarray,
     times: Sequence[datetime],
 ) -> Tuple[datetime, float, int]:
-    """Return (tca, min_distance_km, index) for a discrete time grid."""
+    """Among discrete time samples, find when two objects were nearest.
+
+    This only looks at the provided samples (for example every 30 minutes).
+    It does **not** zoom in between samples — use
+    ``improve_closest_approach_estimate`` for that.
+
+    Returns
+    -------
+    (closest_sample_time, closest_distance_km, sample_index)
+    """
     dists = pair_distances(pos_a, pos_b)
     idx = int(np.argmin(dists))
     return times[idx], float(dists[idx]), idx
