@@ -19,7 +19,6 @@ def find_close_approaches(
     satellites: Dict[int, EarthSatellite],
     propagate_from_utc: datetime,
     propagate_until_utc: datetime,
-    *,
     time_step_seconds: float,
     close_approach_threshold_km: float,
 ) -> List[ConjunctionClaim]:
@@ -53,13 +52,6 @@ def find_close_approaches(
           — the field name is historical; it means that time in UTC
         - ``min_distance_km``: that closest distance in kilometers
         - ``algorithm_id``: a short name for your method (optional but useful)
-
-    Notes
-    -----
-    A coarse ``time_step_seconds`` only gives an approximate closest time.
-    Prefer improving that estimate (see
-    ``improve_closest_approach_estimate`` in the toolkit) before relying on
-    verification.
     """
     raise NotImplementedError(
         "Implement find_close_approaches() in student_solution.py. "

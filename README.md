@@ -31,18 +31,33 @@ The GitHub `solve` branch must be **public** so Colab can download the zip archi
 
 ---
 
+## Naive baseline
+
+The reference algorithm is `naive_baseline_find_close_approaches` in the notebook (check every pair on a time grid). Students replace it with `student_solution.py`.
+
 ## Student interface
 
 ```python
 def find_close_approaches(
     satellites,
-    propagate_from_utc,   # start searching / propagating here
-    propagate_until_utc,  # stop here (e.g. start + 6 hours)
-    *,
-    time_step_seconds,              # e.g. 30 * 60 for every 30 minutes
+    propagate_from_utc,            # start searching / propagating here
+    propagate_until_utc,           # stop here (e.g. start + 6 hours)
+    time_step_seconds,             # e.g. 30 * 60 for every 30 minutes
     close_approach_threshold_km,
 ) -> list[ConjunctionClaim]:
     ...
+```
+
+Example:
+
+```python
+claims = find_close_approaches(
+    satellites,
+    propagate_from_utc,
+    propagate_until_utc,
+    30 * 60,   # check every 30 minutes
+    100.0,     # keep pairs closer than 100 km
+)
 ```
 
 Each `ConjunctionClaim` needs `norad_a`, `norad_b`, `tca_utc` (time of closest approach in UTC), and `min_distance_km`.
@@ -65,7 +80,6 @@ Verification defaults: distance within **0.1 km**, closest time within **5 s**.
 | `closest_approach_on_grid(pos_a, pos_b, times)` | Nearest approach **among samples only** |
 | `improve_closest_approach_estimate(a, b, rough_time)` | Zoom in around a rough closest time |
 | `distance_at(a, b, when)` | Distance at one instant |
-| `screen_pairs(...)` | Naive baseline: every pair × every sample |
 | `verify_claim(claim, satellites)` | Independent accept/reject |
 | `plot_trajectories` / `plot_pair_with_distance` / `save_html` | Plots |
 
@@ -75,7 +89,6 @@ from conjunction_toolkit import (
     catalog_to_satellites,
     time_grid,
     improve_closest_approach_estimate,
-    screen_pairs,
     verify_claim,
 )
 ```
