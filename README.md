@@ -21,16 +21,13 @@ Given a catalog of satellites, find pairs that come close while you propagate th
 
 ---
 
-## Setup
+## Setup (Google Colab)
 
-```bash
-cd conjections_hackaton
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-```
+1. Open / share `conjunction_tutorial.ipynb` in Colab.
+2. Run the **Setup** cell — it installs packages and **downloads a zip** of the project into `/content` (no git clone).
+3. Implement your algorithm in `/content/collision_detection_hackathon-solve/student_solution.py`.
 
-Open `conjunction_tutorial.ipynb` from the project root.
+The GitHub `solve` branch must be **public** so Colab can download the zip archive.
 
 ---
 
