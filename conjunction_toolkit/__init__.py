@@ -36,6 +36,7 @@ Data types: ``Catalog``, ``OrbitalElements``, ``ConjunctionClaim``,
 """
 
 from conjunction_toolkit.baseline import screen_pairs
+from conjunction_toolkit.screener import screen_pairs_fast
 from conjunction_toolkit.models import (
     Catalog,
     ConjunctionClaim,
@@ -87,6 +88,7 @@ __all__ = [
     "propagate_positions",
     "save_html",
     "screen_pairs",
+    "screen_pairs_fast",
     "time_grid",
     "verify_claim",
 ]
