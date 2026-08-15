@@ -1,8 +1,8 @@
 """Student solution: find close approaches between satellites.
 
-Replace ``find_close_approaches`` with your own algorithm.
-Do not change the function name or the arguments — the notebook verifier
-calls this interface for both the naive baseline and your code.
+This file ships a fast altitude-band + KD-tree search so Colab Run all
+can evaluate a working finder. Replace ``find_close_approaches`` with your
+own algorithm if you want — keep the function name and arguments.
 """
 
 from __future__ import annotations
@@ -13,6 +13,7 @@ from typing import Dict, List
 from skyfield.api import EarthSatellite
 
 from conjunction_toolkit.models import ConjunctionClaim
+from conjunction_toolkit.screener import screen_pairs_fast
 
 
 def find_close_approaches(
@@ -49,13 +50,21 @@ def find_close_approaches(
 
         - ``norad_a``, ``norad_b``: the two object ids
         - ``tca_utc``: time of closest approach (when they were nearest)
-          — the field name is historical; it means that time in UTC
         - ``min_distance_km``: that closest distance in kilometers
         - ``algorithm_id``: a short name for your method (optional but useful)
     """
-    raise NotImplementedError(
-        "Implement find_close_approaches() in student_solution.py. "
-        "Return a list of ConjunctionClaim for every pair that comes within "
-        "close_approach_threshold_km while propagating from "
-        "propagate_from_utc until propagate_until_utc."
+    claims = screen_pairs_fast(
+        satellites,
+        propagate_from_utc,
+        propagate_until_utc,
+        step_seconds=time_step_seconds,
+        threshold_km=close_approach_threshold_km,
+        refine=True,
+        algorithm_id="fast_kdtree",
     )
+    return [
+        claim
+        for claim in claims
+        if claim.min_distance_km > 1e-6
+        and propagate_from_utc <= claim.tca_utc <= propagate_until_utc
+    ]

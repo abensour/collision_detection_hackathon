@@ -3,11 +3,12 @@ __pycache__/
 *.py[cod]
 *.egg-info/
 .pytest_cache/
-examples/output/
 .DS_Store
+output/
 
-# Full catalog dump (organizer only; students use spacetrack_data.json)
+# Organizer-only; not part of the Colab student package
 spacetrack_data_full.json
 colab_bundle/
 colab_conjunction_bundle.zip
-__pycache__/
+student_bundle.zip
+build_student_bundle.py

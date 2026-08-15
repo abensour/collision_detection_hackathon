@@ -2,7 +2,9 @@
 
 Python toolkit built on [Skyfield](https://rhodesmill.org/skyfield/) (SGP4) for loading satellite catalogs, propagating orbits, visualizing trajectories, and checking close approaches.
 
-**Students:** start with `conjunction_tutorial.ipynb` and implement `student_solution.py`.
+**Students:** open `conjunction_tutorial.ipynb` in Google Colab (not this git repo). Run **Setup**, then **Run all**. That download is the full student package.
+
+Colab notebook: https://colab.research.google.com/github/abensour/collision_detection_hackathon/blob/solve/conjunction_tutorial.ipynb
 
 ---
 
@@ -10,30 +12,30 @@ Python toolkit built on [Skyfield](https://rhodesmill.org/skyfield/) (SGP4) for 
 
 Given a catalog of satellites, find pairs that come close while you propagate their orbits forward in time. Submit **claims** (two object ids + time of closest approach + miss distance) that pass independent verification.
 
-## What you are given
+## What Colab gives you
 
 | Item | Role |
 |------|------|
 | `spacetrack_data.json` | Catalog (~17k objects, epoch on **1 June 2026**) |
-| `conjunction_toolkit/` | Load, propagate, naive baseline, plot, verify |
-| `student_solution.py` | Your algorithm (`find_close_approaches`) |
+| `conjunction_toolkit/` | Load, propagate, naive baseline, fast screener, plot, verify |
+| `student_solution.py` | Working fast finder (`find_close_approaches`) — replace it if you want |
 | `conjunction_tutorial.ipynb` | Step-by-step notebook + verifier |
 
 ---
 
 ## Setup (Google Colab)
 
-1. Open / share `conjunction_tutorial.ipynb` in Colab.
-2. Run the **Setup** cell — it downloads **`student_bundle.zip`** (catalog + toolkit + `student_solution.py`).
-3. Implement your algorithm in `/content/hackathon/student_solution.py`.
+1. Open the notebook link above (or upload `conjunction_tutorial.ipynb`).
+2. Runtime → **Run all**. Setup downloads the `solve` branch zip into `/content/hackathon`.
+3. Your code lives in `/content/hackathon/student_solution.py`.
 
-`student_bundle.zip` is the student package (everything except this notebook). After changing `student_solution.py`, the toolkit, catalog, or README, rebuild it with `python3 build_student_bundle.py` and push `solve`.
+You do not clone this repository. Everything except the notebook comes from that zip.
 
 ---
 
 ## Naive baseline
 
-The reference algorithm is `naive_baseline_find_close_approaches` in the notebook (check every pair on a time grid). Students replace it with `student_solution.py`.
+The reference algorithm is `naive_baseline_find_close_approaches` in the notebook (check every pair on a time grid). `student_solution.py` ships a faster KD-tree search; the verifier compares both.
 
 ## Student interface
 
@@ -103,9 +105,8 @@ from conjunction_toolkit import (
 ## Layout
 
 ```
-conjections_hackaton/
-├── conjunction_tutorial.ipynb   # student notebook
-├── student_solution.py          # student code
+/content/hackathon/              # after Colab Setup
+├── student_solution.py          # fast finder (edit this)
 ├── spacetrack_data.json         # catalog (1 June 2026)
 ├── conjunction_toolkit/         # library
 │   ├── models.py
@@ -113,14 +114,15 @@ conjections_hackaton/
 │   ├── satellites.py
 │   ├── propagate.py
 │   ├── baseline.py              # naive all-pairs baseline
+│   ├── screener.py              # fast KD-tree search
 │   ├── verify.py
 │   ├── visualize.py
 │   └── __init__.py
 ├── requirements.txt
-├── student_bundle.zip           # Colab download (same files as above, minus the notebook)
-├── build_student_bundle.py      # rebuild that zip
-└── examples/                    # optional organizer scripts
+└── README.md
 ```
+
+The notebook stays in Colab; it is not required inside that folder.
 
 ---
 
