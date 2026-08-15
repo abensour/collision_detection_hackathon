@@ -14,7 +14,7 @@ Given a catalog of satellites, find pairs that come close while you propagate th
 
 | Item | Role |
 |------|------|
-| `spacetrack_data.json` | Catalog (~28k objects, epochs on **31 May** and **1 June 2026**) |
+| `spacetrack_data.json` | Catalog (~17k objects, epoch on **1 June 2026**) |
 | `conjunction_toolkit/` | Load, propagate, naive baseline, plot, verify |
 | `student_solution.py` | Your algorithm (`find_close_approaches`) |
 | `conjunction_tutorial.ipynb` | Step-by-step notebook + verifier |
@@ -106,7 +106,7 @@ from conjunction_toolkit import (
 conjections_hackaton/
 ├── conjunction_tutorial.ipynb   # student notebook
 ├── student_solution.py          # student code
-├── spacetrack_data.json         # catalog (31 May + 1 June 2026)
+├── spacetrack_data.json         # catalog (1 June 2026)
 ├── conjunction_toolkit/         # library
 │   ├── models.py
 │   ├── parse.py
