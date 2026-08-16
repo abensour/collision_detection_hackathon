@@ -18,9 +18,8 @@ Propagate / distances
   - ``closest_approach_on_grid`` — among discrete samples, find nearest approach
   - ``distance_at`` — distance between two satellites at one instant
 
-Screening
+Screening (naive)
   - ``screen_pairs`` — check every unique pair on a time grid (slow baseline)
-  - ``screen_pairs_fast`` — altitude bands + KD-tree (used by student_solution.py)
 
 Verify
   - ``improve_closest_approach_estimate`` — zoom in around a rough closest time
@@ -37,7 +36,6 @@ Data types: ``Catalog``, ``OrbitalElements``, ``ConjunctionClaim``,
 """
 
 from conjunction_toolkit.baseline import screen_pairs
-from conjunction_toolkit.screener import screen_pairs_fast
 from conjunction_toolkit.models import (
     Catalog,
     ConjunctionClaim,
@@ -89,7 +87,6 @@ __all__ = [
     "propagate_positions",
     "save_html",
     "screen_pairs",
-    "screen_pairs_fast",
     "time_grid",
     "verify_claim",
 ]

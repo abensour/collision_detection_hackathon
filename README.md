@@ -17,8 +17,8 @@ Given a catalog of satellites, find pairs that come close while you propagate th
 | Item | Role |
 |------|------|
 | `spacetrack_data.json` | Catalog (~17k objects, epoch on **1 June 2026**) |
-| `conjunction_toolkit/` | Load, propagate, naive baseline, fast screener, plot, verify |
-| `student_solution.py` | Working fast finder (`find_close_approaches`) — replace it if you want |
+| `conjunction_toolkit/` | Load, propagate, naive baseline, plot, verify |
+| `student_solution.py` | Your algorithm (`find_close_approaches`) — empty stub |
 | `conjunction_tutorial.ipynb` | Step-by-step notebook + verifier |
 
 ---
@@ -35,7 +35,7 @@ You do not clone this repository. Everything except the notebook comes from that
 
 ## Naive baseline
 
-The reference algorithm is `naive_baseline_find_close_approaches` in the notebook (check every pair on a time grid). `student_solution.py` ships a faster KD-tree search; the verifier compares both.
+The reference algorithm is `naive_baseline_find_close_approaches` in the notebook (check every pair on a time grid). Students replace it with `student_solution.py`. Both take `max_runtime_seconds` (notebook default **300** = 5 minutes).
 
 ## Student interface
 
@@ -46,6 +46,7 @@ def find_close_approaches(
     propagate_until_utc,           # stop here (e.g. start + 6 hours)
     time_step_seconds,             # e.g. 30 * 60 for every 30 minutes
     close_approach_threshold_km,
+    max_runtime_seconds,           # e.g. 300 for 5 minutes; change MAX_RUNTIME_SECONDS
 ) -> list[ConjunctionClaim]:
     ...
 ```
@@ -59,6 +60,7 @@ claims = find_close_approaches(
     propagate_until_utc,
     30 * 60,   # check every 30 minutes
     100.0,     # keep pairs closer than 100 km
+    300,       # stop after 5 minutes
 )
 ```
 
@@ -106,7 +108,7 @@ from conjunction_toolkit import (
 
 ```
 /content/hackathon/              # after Colab Setup
-├── student_solution.py          # fast finder (edit this)
+├── student_solution.py          # student code (stub)
 ├── spacetrack_data.json         # catalog (1 June 2026)
 ├── conjunction_toolkit/         # library
 │   ├── models.py
@@ -114,7 +116,6 @@ from conjunction_toolkit import (
 │   ├── satellites.py
 │   ├── propagate.py
 │   ├── baseline.py              # naive all-pairs baseline
-│   ├── screener.py              # fast KD-tree search
 │   ├── verify.py
 │   ├── visualize.py
 │   └── __init__.py

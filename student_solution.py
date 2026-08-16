@@ -1,8 +1,8 @@
 """Student solution: find close approaches between satellites.
 
-This file ships a fast altitude-band + KD-tree search so Colab Run all
-can evaluate a working finder. Replace ``find_close_approaches`` with your
-own algorithm if you want — keep the function name and arguments.
+Replace ``find_close_approaches`` with your own algorithm.
+Do not change the function name or the arguments — the notebook verifier
+calls this interface for both the naive baseline and your code.
 """
 
 from __future__ import annotations
@@ -13,7 +13,6 @@ from typing import Dict, List
 from skyfield.api import EarthSatellite
 
 from conjunction_toolkit.models import ConjunctionClaim
-from conjunction_toolkit.screener import screen_pairs_fast
 
 
 def find_close_approaches(
@@ -22,6 +21,7 @@ def find_close_approaches(
     propagate_until_utc: datetime,
     time_step_seconds: float,
     close_approach_threshold_km: float,
+    max_runtime_seconds: float,
 ) -> List[ConjunctionClaim]:
     """Find pairs of satellites that come closer than the distance threshold.
 
@@ -42,6 +42,10 @@ def find_close_approaches(
     close_approach_threshold_km:
         Report a pair only if their closest distance on your search is less
         than or equal to this many kilometers.
+    max_runtime_seconds:
+        Stop searching after this many seconds and return the claims you
+        already have. The notebook default is 300 (5 minutes). Change
+        ``MAX_RUNTIME_SECONDS`` in the notebook to use a different limit.
 
     Returns
     -------
@@ -50,21 +54,14 @@ def find_close_approaches(
 
         - ``norad_a``, ``norad_b``: the two object ids
         - ``tca_utc``: time of closest approach (when they were nearest)
+          — the field name is historical; it means that time in UTC
         - ``min_distance_km``: that closest distance in kilometers
         - ``algorithm_id``: a short name for your method (optional but useful)
     """
-    claims = screen_pairs_fast(
-        satellites,
-        propagate_from_utc,
-        propagate_until_utc,
-        step_seconds=time_step_seconds,
-        threshold_km=close_approach_threshold_km,
-        refine=True,
-        algorithm_id="fast_kdtree",
+    raise NotImplementedError(
+        "Implement find_close_approaches() in student_solution.py. "
+        "Return a list of ConjunctionClaim for every pair that comes within "
+        "close_approach_threshold_km while propagating from "
+        "propagate_from_utc until propagate_until_utc. "
+        "Stop after max_runtime_seconds and return what you have."
     )
-    return [
-        claim
-        for claim in claims
-        if claim.min_distance_km > 1e-6
-        and propagate_from_utc <= claim.tca_utc <= propagate_until_utc
-    ]
