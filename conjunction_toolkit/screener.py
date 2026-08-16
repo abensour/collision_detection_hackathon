@@ -15,9 +15,10 @@ same as the baseline and verifier.
 
 from __future__ import annotations
 
+import time
 from datetime import datetime
 from itertools import combinations
-from typing import Dict, List, Optional, Sequence, Set, Tuple
+from typing import Callable, Dict, List, Optional, Sequence, Set, Tuple
 
 import numpy as np
 from scipy.spatial import cKDTree
@@ -107,6 +108,7 @@ def _candidate_pairs_kdtree(
     allowed_pairs: Optional[Set[PairKey]],
     bands: Optional[Dict[int, Tuple[float, float]]],
     pad_km: float,
+    timed_out: Optional[Callable[[], bool]] = None,
 ) -> Set[PairKey]:
     """Union of pairs within ``threshold_km`` at any timestep (KD-tree)."""
     candidates: Set[PairKey] = set()
@@ -114,6 +116,8 @@ def _candidate_pairs_kdtree(
     id_of = list(ids)
 
     for t_idx in range(n_times):
+        if timed_out is not None and timed_out():
+            break
         xyz = stacked[:, t_idx, :]  # (N, 3)
         finite = np.isfinite(xyz).all(axis=1)
         if finite.sum() < 2:
@@ -158,6 +162,7 @@ def screen_pairs_fast(
     ts: Optional[Timescale] = None,
     algorithm_id: str = "spatial_hash",
     materialize_altitude_pairs: bool = True,
+    max_runtime_seconds: Optional[float] = 300.0,
 ) -> List[ConjunctionClaim]:
     """Fast conjunction screen: altitude filter + spatial KD-tree (+ optional refine).
 
@@ -173,8 +178,18 @@ def screen_pairs_fast(
     materialize_altitude_pairs:
         If True and N ≤ 500, precompute allowed altitude pairs. Otherwise check
         bands on the fly while collecting spatial candidates.
+    max_runtime_seconds:
+        Stop and return claims found so far after this many seconds
+        (hackathon cap is 5 minutes). ``None`` means no cap.
     """
     del cell_size_km  # API compat; KD-tree radius == threshold_km
+
+    t_start = time.perf_counter()
+
+    def timed_out() -> bool:
+        if max_runtime_seconds is None:
+            return False
+        return (time.perf_counter() - t_start) >= max_runtime_seconds
 
     ts = get_timescale(ts)
     t0 = ensure_utc(t0)
@@ -210,10 +225,13 @@ def screen_pairs_fast(
         allowed_pairs=allowed,
         bands=band_filter,
         pad_km=altitude_pad_km,
+        timed_out=timed_out,
     )
 
     claims: List[ConjunctionClaim] = []
     for a, b in candidates:
+        if timed_out():
+            break
         tca, dmin, _ = closest_approach_on_grid(positions[a], positions[b], times)
         if dmin > threshold_km:
             continue

@@ -25,9 +25,9 @@ Given a catalog of satellites, find pairs that come close while you propagate th
 
 1. Open / share `conjunction_tutorial.ipynb` in Colab.
 2. Run the **Setup** cell — it installs packages and **downloads a zip** of the project into `/content` (no git clone).
-3. Implement your algorithm in `/content/collision_detection_hackathon-solve/student_solution.py`.
+3. Your algorithm is `/content/collision_detection_hackathon-cloude_student/student_solution.py`.
 
-The GitHub `solve` branch must be **public** so Colab can download the zip archive.
+The GitHub `cloude_student` branch must be **public** so Colab can download the zip archive. The fast finder stops after 5 minutes.
 
 ---
 

@@ -24,6 +24,8 @@ def find_close_approaches(
     1. Skip pairs whose altitude bands cannot meet
     2. Find nearby pairs each timestep with a KD-tree
     3. Measure miss distance on the time grid, then refine the closest time
+
+    Stops after 5 minutes and returns claims found so far.
     """
     claims = screen_pairs_fast(
         satellites,
@@ -33,6 +35,7 @@ def find_close_approaches(
         threshold_km=close_approach_threshold_km,
         refine=True,
         algorithm_id="cloude_student_fast",
+        max_runtime_seconds=300.0,
     )
     # Drop decayed/invalid objects (0 km at Earth center) and times outside the search span
     return [
