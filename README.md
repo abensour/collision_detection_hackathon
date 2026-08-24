@@ -188,33 +188,6 @@ python examples/run_fast_screen.py       # optional N: python examples/run_fast_
 python examples/verify_claim.py --demo
 python examples/verify_claim.py --a 1 --b 5 --tca 2026-05-13T12:00:00+00:00 --d 5000
 ```
-
-## Fast screener
-
-`screen_pairs_fast()` is the toolkit’s reference fast algorithm:
-
-1. **Altitude bands** from SGP4 elements (approx. perigee/apogee) — skip pairs that cannot meet within `threshold + pad`
-2. **Spatial KD-tree** each timestep (`scipy.spatial.cKDTree.query_pairs`) — only keep pairs that come within `threshold_km` on the grid (same pruning role as a spatial hash / neighbor voxels)
-3. Vectorized full-grid miss distance on that candidate set, then optional **TCA refine**
-
-```python
-from conjunction_toolkit import screen_pairs_fast
-
-claims = screen_pairs_fast(
-    sats, t0, t1,
-    step_seconds=60.0,
-    threshold_km=10.0,
-    refine=True,
-)
-```
-
-Compare against the brute-force baseline (`N` and optional threshold km):
-
-```bash
-python examples/run_fast_screen.py 200
-python examples/run_fast_screen.py 500 25
-```
-
 ## Claiming a conjunction
 
 Submit a `ConjunctionClaim(norad_a, norad_b, tca_utc, min_distance_km)`. Organizers run `verify_claim()`, which:
