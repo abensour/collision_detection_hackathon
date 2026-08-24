@@ -88,12 +88,17 @@ class Catalog:
 
 @dataclass(frozen=True)
 class ConjunctionClaim:
-    """A claimed close approach between two objects."""
+    """A claimed close approach between two objects.
+
+    Required: the two object ids and the claimed time.
+    Optional: ``min_distance_km`` (actual miss distance if you computed it)
+    and ``algorithm_id`` (short label for your method).
+    """
 
     norad_a: int
     norad_b: int
     tca_utc: datetime
-    min_distance_km: float
+    min_distance_km: Optional[float] = None
     algorithm_id: Optional[str] = None
 
     def __post_init__(self) -> None:

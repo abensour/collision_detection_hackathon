@@ -64,9 +64,8 @@ claims = find_close_approaches(
 )
 ```
 
-Each `ConjunctionClaim` needs `norad_a`, `norad_b`, `tca_utc` (time of closest approach in UTC), and `min_distance_km`.
-
-Verification defaults: distance within **0.1 km**, closest time within **5 s**.
+Each `ConjunctionClaim` needs `norad_a`, `norad_b`, and `tca_utc` (claimed time in UTC).
+`min_distance_km` and `algorithm_id` are optional.
 
 ---
 

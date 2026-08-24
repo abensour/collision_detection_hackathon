@@ -196,13 +196,19 @@ def verify_claim(
             messages=[f"Propagation / closest-approach improvement failed: {exc}"],
         )
 
-    distance_error = abs(closest_distance_km - claim.min_distance_km)
+    if claim.min_distance_km is None:
+        distance_error = float("nan")
+    else:
+        distance_error = abs(closest_distance_km - claim.min_distance_km)
     time_error = abs(
         (closest_time - ensure_utc(claim.tca_utc)).total_seconds()
     )
 
     ok = True
-    if distance_error > config.distance_tolerance_km:
+    if (
+        claim.min_distance_km is not None
+        and distance_error > config.distance_tolerance_km
+    ):
         ok = False
         messages.append(
             f"Distance mismatch: claimed {claim.min_distance_km:.6f} km, "

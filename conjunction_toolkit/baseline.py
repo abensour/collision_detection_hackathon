@@ -75,5 +75,7 @@ def screen_pairs(
                 )
             )
 
-    claims.sort(key=lambda c: c.min_distance_km)
+    claims.sort(
+        key=lambda c: float("inf") if c.min_distance_km is None else c.min_distance_km
+    )
     return claims
